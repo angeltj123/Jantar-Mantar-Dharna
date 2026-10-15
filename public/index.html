@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#1f1a14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="description" content="Dharna Chowk Chalo: a multiplayer satire game set on a cartoon map of central New Delhi. Grow a kafila and hold the dharna at Jantar Mantar, or play the police.">
+<title>Dharna Chowk Chalo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rozha+One&family=Hind:wght@400;600;700&display=swap">
+<!--GAME-CSS-->
+<link rel="stylesheet" href="style.css">
+<!--/GAME-CSS-->
+<script>
+  /* If the game page is hosted on a different domain from the game server,
+     set the server's WebSocket address here, e.g. 'wss://play.example.com/ws'. */
+  window.DCC_SERVER = window.DCC_SERVER || '';
+</script>
+</head>
+<body>
+<!--GAME-BODY-->
+<canvas id="cv" aria-label="Game map"></canvas>
+
+<div class="hud" id="hud">
+  <div class="role" id="hRole">Andolankari</div>
+  <div class="big" id="hBig">0<small>in your kafila</small></div>
+  <div class="row"><span id="hMeterL">Dharna</span><span id="hMeterV">0%</span></div>
+  <div class="meter"><i id="hMeter"></i></div>
+  <div class="row"><span id="hInfo"></span><span id="hScore"></span></div>
+</div>
+<div class="timer" id="hTime">5:00</div>
+<div class="corner">
+  <canvas id="mini" aria-label="Minimap"></canvas>
+  <div class="tools">
+    <button type="button" class="tool" id="boardBtn" aria-label="Scoreboard">🏆</button>
+    <button type="button" class="tool" id="muteBtn" aria-label="Sound on">🔊</button>
+    <button type="button" class="tool" id="menuBtn" aria-label="Menu">☰</button>
+  </div>
+</div>
+<div class="acts" id="acts"></div>
+<div class="joy" id="joy" hidden><div class="knob" id="knob"></div></div>
+<div class="keys">Arrows / mouse to walk · <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> actions · <kbd>Tab</kbd> scores · <kbd>M</kbd> mute · <kbd>Q</kbd> graphics · <kbd>T</kbd> switch team · <kbd>Esc</kbd> menu</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<div class="respawn" id="respawn" hidden>बस में बैठे हो… new kafila in <b id="respawnT">6</b>s</div>
+
+<div class="panel board" id="board" hidden>
+  <div class="phead"><b>Scoreboard</b><button type="button" class="x" id="boardClose" aria-label="Close">✕</button></div>
+  <p class="sub" id="boardTeams"></p>
+  <ol id="boardList"></ol>
+</div>
+
+<div class="overlay" id="round" hidden>
+  <div class="sheet">
+    <p class="res" id="rTitle">धरना हो गया!</p>
+    <p class="lede" id="rText"></p>
+    <p class="sub" id="rStats"></p>
+    <ol class="rboard" id="rBoard"></ol>
+    <div class="btns" id="rOffline">
+      <button class="btn" id="rAgain" type="button">Play again</button>
+      <button class="btn alt" id="rSwap" type="button">Switch team</button>
+      <button class="btn alt" id="rMenu" type="button">Menu</button>
+    </div>
+    <div class="btns" id="rNext"><span class="sub">Next round starts on its own.</span><button class="btn alt" id="rHide" type="button">Watch the map</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="menu">
+  <div class="sheet">
+    <div class="stamps"><span>NAARA</span><span>LIFT</span><span>GAS</span><span>DASH</span></div>
+    <h1>Dharna Chowk Chalo</h1>
+    <p class="hi">धरना चौक चलो! <small>✊ 🚧 👮 · New Delhi</small></p>
+    <p class="lede">Start anywhere within 1 km of <b>Jantar Mantar</b>. Build a kafila on the way, break the barricades and hold the dharna. Or join the police and stop them.</p>
+    <label class="field" for="name"><span>Your name</span><input id="name" maxlength="16" autocomplete="nickname" placeholder="e.g. Pappu from Patel Nagar"></label>
+    <div class="picks" role="group" aria-label="Team">
+      <button type="button" class="pick p" data-t="P" aria-pressed="true"><b>✊ Andolankari</b><span>Walk into people to grow your kafila. Push barricades. Sit at Jantar Mantar.</span></button>
+      <button type="button" class="pick c" data-t="C" aria-pressed="false"><b>👮 Police</b><span>Lathi breaks crowds. Lift exposed leaders onto the bus. Big crowds knock you over.</span></button>
+      <button type="button" class="pick a" data-t="A" aria-pressed="false"><b>🎲 Any side</b><span>Online only: join whichever team needs players.</span></button>
+    </div>
+    <div class="btns">
+      <button class="btn big" id="playOn" type="button" disabled>Play online ▶</button>
+      <button class="btn alt big" id="playOff" type="button" disabled>Practice offline</button>
+      <button class="btn alt" id="resume" type="button" hidden>Resume</button>
+    </div>
+    <div class="roomrow">
+      <label class="field" for="room"><span>Private room code (optional)</span><input id="room" maxlength="12" autocomplete="off" placeholder="leave empty for public"></label>
+      <button class="btn alt" id="invite" type="button">Copy invite link</button>
+    </div>
+    <p class="status" id="netStatus">Checking server…</p>
+    <p class="status" id="loading" hidden>Drawing Delhi…</p>
+    <details class="how">
+      <summary>How to play</summary>
+      <ul>
+        <li><b>Andolankari</b> — walk into people to recruit them. <kbd>W</kbd> / click <b>NAARA</b> pulls in people nearby; every 10 people shouting together leave one policeman dizzy. You need 10+ people to break a barricade: hold <kbd>A</kbd> <b>PUSH</b>. 10 of your people around a policeman push him out. 5 of your people at a police van unlock it and free one prisoner; 10 tip the van over and free everyone. <kbd>S</kbd> <b>CHHUDAO</b> speeds up a rescue. <kbd>D</kbd> dash. Sit inside the dashed circle on Jantar Mantar Road with 5+ people until the meter fills.</li>
+        <li><b>Police</b> — click <b>LATHI</b> scatters the crowd. Every 10 people you hit earn one backup constable: <kbd>W</kbd> <b>CALL</b> (up to 5). You start with 5 tear gas shells; every 5 people you hit earn 3 more. <kbd>A</kbd> <b>GAS</b> scatters up to 5 people, or leaves a lone person dizzy for 10 seconds. <kbd>S</kbd> <b>DRAG</b> grabs one protester; vans stop for 10 seconds when you bring someone close — press <kbd>S</kbd> at the van to put them in. With 5 police together, <kbd>E</kbd> <b>BARRIER</b> repairs a broken barricade or puts up a new one across the road. <kbd>D</kbd> dash.</li>
+        <li>Rounds last 5 minutes online. Andolankari win if any kafila completes the dharna; police win if time runs out.</li>
+        <li>Phone: drag the joystick on the left to walk, buttons on the right. Computer: point with the mouse or use the arrow keys.</li>
+      </ul>
+    </details>
+    <div class="btns small"><button class="btn alt" id="fullBtn" type="button">Full screen</button></div>
+    <p class="fine">Satire. Every kafila, slogan and player name is fictional; the map is a simplified cartoon of central New Delhi, not a navigation map. 🤖 = AI player.</p>
+  </div>
+</div>
+<!--/GAME-BODY-->
+<!--GAME-JS-->
+<script src="shared/map.js"></script>
+<script src="shared/sim.js"></script>
+<script src="client.js"></script>
+<!--/GAME-JS-->
+</body>
+</html>

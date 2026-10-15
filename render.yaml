@@ -1,0 +1,15 @@
+# One-click deploy on Render (render.com): New > Blueprint > pick this repo.
+services:
+  - type: web
+    name: dharna-chowk-chalo
+    runtime: node
+    region: singapore        # closest Render region to India
+    plan: starter            # free plans sleep when idle; use starter or above for a public game
+    buildCommand: npm ci --omit=dev
+    startCommand: node server.js
+    healthCheckPath: /health
+    envVars:
+      - key: TRUST_PROXY
+        value: "1"
+      - key: ROUND_SECONDS
+        value: "300"
